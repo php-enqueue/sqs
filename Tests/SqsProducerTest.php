@@ -196,8 +196,96 @@ class SqsProducerTest extends \PHPUnit_Framework_TestCase
         return $this
             ->getMockBuilder(SqsClient::class)
             ->disableOriginalConstructor()
-            ->setMethods(['sendMessage'])
+            ->setMethods(['sendMessage', 'sendMessageBatch'])
             ->getMock()
         ;
+    }
+
+    public function testShouldSendMessageBatch()
+    {
+        $expectedArguments = [
+            [
+                'MessageAttributes' => [
+                    'Headers' => [
+                        'DataType' => 'String',
+                        'StringValue' => '[{"hkey1":"hvaleu1"},{"key1":"value1"}]',
+                    ],
+                ],
+                'MessageBody' => 'theBody1',
+                'QueueUrl' => 'theQueueUrl',
+                'DelaySeconds' => 12345,
+                'MessageDeduplicationId' => 'theDeduplicationId1',
+                'MessageGroupId' => 'groupId',
+            ],
+            [
+                'MessageAttributes' => [
+                    'Headers' => [
+                        'DataType' => 'String',
+                        'StringValue' => '[{"hkey2":"hvaleu2"},{"key2":"value2"}]',
+                    ],
+                ],
+                'MessageBody' => 'theBody2',
+                'QueueUrl' => 'theQueueUrl',
+                'DelaySeconds' => 54321,
+                'MessageDeduplicationId' => 'theDeduplicationId2',
+                'MessageGroupId' => 'groupId2',
+            ],
+        ];
+
+        $client = $this->createSqsClientMock();
+        $client
+            ->expects($this->once())
+            ->method('sendMessageBatch')
+            ->with($this->identicalTo($expectedArguments))
+            ->willReturn(new Result([
+                'Failed' => [
+                    [
+                        'Code' => 'code',
+                        'Id' => 'id',
+                        'Message' => 'MESSAGE',
+                        'SenderFault' => true ,
+                    ]
+                ],
+                'Successful' => [
+                    [
+                        'Id' => 'id',
+                        'MD5OfMessageAttributes' => 'md5_of_message_attributes',
+                        'MD5OfMessageBody' => 'md5_of_message_body',
+                        'MessageId' => 'message_id',
+                        'SequenceNumber' => 'sequence_number',
+                    ],
+                ],
+            ]))
+        ;
+
+        $context = $this->createSqsContextMock();
+        $context
+            ->expects($this->exactly(2))
+            ->method('getQueueUrl')
+            ->willReturn('theQueueUrl')
+        ;
+        $context
+            ->expects($this->once())
+            ->method('getClient')
+            ->will($this->returnValue($client))
+        ;
+
+        $destination = new SqsDestination('queue-name');
+
+        $message1 = new SqsMessage('theBody1', ['key1' => 'value1'], ['hkey1' => 'hvaleu1']);
+        $message1->setDelaySeconds(12345);
+        $message1->setMessageDeduplicationId('theDeduplicationId1');
+        $message1->setMessageGroupId('groupId');
+
+        $message2 = new SqsMessage('theBody2', ['key2' => 'value2'], ['hkey2' => 'hvaleu2']);
+        $message2->setDelaySeconds(54321);
+        $message2->setMessageDeduplicationId('theDeduplicationId2');
+        $message2->setMessageGroupId('groupId2');
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Messages were not sent: [{"Code":"code","Id":"id","Message":"MESSAGE","SenderFault":true}]');
+
+        $producer = new SqsProducer($context);
+        $producer->sendAll($destination, [$message1, $message2]);
     }
 }
