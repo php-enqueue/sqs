@@ -104,10 +104,7 @@ class SqsProducer implements PsrProducer
     {
         InvalidDestinationException::assertDestinationInstanceOf($destination, SqsDestination::class);
 
-        $arguments = [];
-        foreach ($messages as $message) {
-            $arguments[] = $this->arguments($destination, $message);
-        }
+        $arguments = $this->arguments($destination, $messages);
 
         $result = $this->context->getClient()->sendMessageBatch($arguments);
 
@@ -117,12 +114,38 @@ class SqsProducer implements PsrProducer
     }
 
     /**
-     * @param SqsDestination $destination
-     * @param SqsMessage     $message
+     * @param SqsDestination           $destination
+     * @param SqsMessage|SqsMessage[]  $messages
      * @return array
      * @throws InvalidMessageException
      */
-    private function arguments(PsrDestination $destination, PsrMessage $message): array
+    private function arguments(PsrDestination $destination, $messages): array
+    {
+        $arguments = [
+            'QueueUrl' => $this->context->getQueueUrl($destination),
+        ];
+
+        if (is_array($messages)) {
+            $arguments['Entries'] = [];
+            foreach ($messages as $message) {
+                $arguments['Entries'][] = array_merge(
+                    ['Id' => $message->getMessageId()],
+                    $this->messsageArguments($message)
+                );
+            }
+        } else {
+            $arguments = array_merge($arguments, $this->messsageArguments($messages));
+        }
+
+        return $arguments;
+    }
+
+    /**
+     * @param SqsMessage $message
+     * @return array
+     * @throws InvalidMessageException
+     */
+    private function messsageArguments(SqsMessage $message): array
     {
         InvalidMessageException::assertMessageInstanceOf($message, SqsMessage::class);
 
@@ -131,6 +154,10 @@ class SqsProducer implements PsrProducer
             throw new InvalidMessageException('The message body must be a non-empty string.');
         }
 
+        $body = $message->getBody();
+        if (empty($body)) {
+            throw new InvalidMessageException('The message body must be a non-empty string.');
+        }
         $arguments = [
             'MessageAttributes' => [
                 'Headers' => [
@@ -139,9 +166,7 @@ class SqsProducer implements PsrProducer
                 ],
             ],
             'MessageBody' => $body,
-            'QueueUrl' => $this->context->getQueueUrl($destination),
         ];
-
         if (null !== $this->deliveryDelay) {
             $arguments['DelaySeconds'] = (int) $this->deliveryDelay / 1000;
         }

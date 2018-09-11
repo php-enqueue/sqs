@@ -84,6 +84,7 @@ class SqsProducerTest extends \PHPUnit_Framework_TestCase
     public function testShouldSendMessage()
     {
         $expectedArguments = [
+            'QueueUrl' => 'theQueueUrl',
             'MessageAttributes' => [
                 'Headers' => [
                     'DataType' => 'String',
@@ -91,7 +92,6 @@ class SqsProducerTest extends \PHPUnit_Framework_TestCase
                 ],
             ],
             'MessageBody' => 'theBody',
-            'QueueUrl' => 'theQueueUrl',
             'DelaySeconds' => 12345,
             'MessageDeduplicationId' => 'theDeduplicationId',
             'MessageGroupId' => 'groupId',
@@ -133,6 +133,7 @@ class SqsProducerTest extends \PHPUnit_Framework_TestCase
     public function testShouldSendDelayedMessage()
     {
         $expectedArguments = [
+            'QueueUrl' => 'theQueueUrl',
             'MessageAttributes' => [
                 'Headers' => [
                     'DataType' => 'String',
@@ -140,7 +141,6 @@ class SqsProducerTest extends \PHPUnit_Framework_TestCase
                 ],
             ],
             'MessageBody' => 'theBody',
-            'QueueUrl' => 'theQueueUrl',
             'DelaySeconds' => 12345,
             'MessageDeduplicationId' => 'theDeduplicationId',
             'MessageGroupId' => 'groupId',
@@ -205,30 +205,33 @@ class SqsProducerTest extends \PHPUnit_Framework_TestCase
     {
         $expectedArguments = [
             [
-                'MessageAttributes' => [
-                    'Headers' => [
-                        'DataType' => 'String',
-                        'StringValue' => '[{"hkey1":"hvaleu1"},{"key1":"value1"}]',
-                    ],
-                ],
-                'MessageBody' => 'theBody1',
                 'QueueUrl' => 'theQueueUrl',
-                'DelaySeconds' => 12345,
-                'MessageDeduplicationId' => 'theDeduplicationId1',
-                'MessageGroupId' => 'groupId',
-            ],
-            [
-                'MessageAttributes' => [
-                    'Headers' => [
-                        'DataType' => 'String',
-                        'StringValue' => '[{"hkey2":"hvaleu2"},{"key2":"value2"}]',
+                'Entries' => [
+                    [
+                        'MessageAttributes' => [
+                            'Headers' => [
+                                'DataType' => 'String',
+                                'StringValue' => '[{"hkey1":"hvaleu1"},{"key1":"value1"}]',
+                            ],
+                        ],
+                        'MessageBody' => 'theBody1',
+                        'DelaySeconds' => 12345,
+                        'MessageDeduplicationId' => 'theDeduplicationId1',
+                        'MessageGroupId' => 'groupId1',
                     ],
+                    [
+                        'MessageAttributes' => [
+                            'Headers' => [
+                                'DataType' => 'String',
+                                'StringValue' => '[{"hkey2":"hvaleu2"},{"key2":"value2"}]',
+                            ],
+                        ],
+                        'MessageBody' => 'theBody2',
+                        'DelaySeconds' => 54321,
+                        'MessageDeduplicationId' => 'theDeduplicationId2',
+                        'MessageGroupId' => 'groupId2',
+                    ]
                 ],
-                'MessageBody' => 'theBody2',
-                'QueueUrl' => 'theQueueUrl',
-                'DelaySeconds' => 54321,
-                'MessageDeduplicationId' => 'theDeduplicationId2',
-                'MessageGroupId' => 'groupId2',
             ],
         ];
 
@@ -260,7 +263,7 @@ class SqsProducerTest extends \PHPUnit_Framework_TestCase
 
         $context = $this->createSqsContextMock();
         $context
-            ->expects($this->exactly(2))
+            ->expects($this->once())
             ->method('getQueueUrl')
             ->willReturn('theQueueUrl')
         ;
@@ -275,7 +278,7 @@ class SqsProducerTest extends \PHPUnit_Framework_TestCase
         $message1 = new SqsMessage('theBody1', ['key1' => 'value1'], ['hkey1' => 'hvaleu1']);
         $message1->setDelaySeconds(12345);
         $message1->setMessageDeduplicationId('theDeduplicationId1');
-        $message1->setMessageGroupId('groupId');
+        $message1->setMessageGroupId('groupId1');
 
         $message2 = new SqsMessage('theBody2', ['key2' => 'value2'], ['hkey2' => 'hvaleu2']);
         $message2->setDelaySeconds(54321);
