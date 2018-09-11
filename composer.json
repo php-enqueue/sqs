@@ -1,5 +1,5 @@
 {
-    "name": "enqueue/sqs",
+    "name": "shippinno/sqs",
     "type": "library",
     "description": "Message Queue Amazon SQS Transport",
     "keywords": ["messaging", "queue", "amazon", "aws", "sqs"],
