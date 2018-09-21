@@ -98,9 +98,10 @@ class SqsProducer implements PsrProducer
 
     /**
      * @param PsrDestination $destination
-     * @param PsrMessage[] $messages
+     * @param array $messages
+     * @return array
      */
-    public function sendAll(PsrDestination $destination, array $messages): void
+    public function sendAll(PsrDestination $destination, array $messages): array
     {
         InvalidDestinationException::assertDestinationInstanceOf($destination, SqsDestination::class);
 
@@ -108,9 +109,14 @@ class SqsProducer implements PsrProducer
 
         $result = $this->context->getClient()->sendMessageBatch($arguments);
 
-        if ($result->hasKey('Failed') && count($result->get('Failed')) > 0) {
-            throw new \RuntimeException('Messages were not sent: ' . json_encode($result->get('Failed')));
+        $successful = [];
+        if ($result->hasKey('Successful') && count($result->get('Successful')) > 0) {
+            $successful = array_map(function ($entry) {
+                return $entry['Id'];
+            }, $result->get('Successful'));
         }
+
+        return $successful;
     }
 
     /**
