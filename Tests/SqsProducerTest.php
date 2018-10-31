@@ -205,34 +205,34 @@ class SqsProducerTest extends TestCase
     public function testShouldSendMessageBatch()
     {
         $expectedArguments = [
-            [
-                'QueueUrl' => 'theQueueUrl',
-                'Entries' => [
-                    [
-                        'MessageAttributes' => [
-                            'Headers' => [
-                                'DataType' => 'String',
-                                'StringValue' => '[{"hkey1":"hvaleu1"},{"key1":"value1"}]',
-                            ],
+            'QueueUrl' => 'theQueueUrl',
+            'Entries' => [
+                [
+                    'Id' => null,
+                    'MessageAttributes' => [
+                        'Headers' => [
+                            'DataType' => 'String',
+                            'StringValue' => '[{"hkey1":"hvaleu1"},{"key1":"value1"}]',
                         ],
-                        'MessageBody' => 'theBody1',
-                        'DelaySeconds' => 12345,
-                        'MessageDeduplicationId' => 'theDeduplicationId1',
-                        'MessageGroupId' => 'groupId1',
                     ],
-                    [
-                        'MessageAttributes' => [
-                            'Headers' => [
-                                'DataType' => 'String',
-                                'StringValue' => '[{"hkey2":"hvaleu2"},{"key2":"value2"}]',
-                            ],
-                        ],
-                        'MessageBody' => 'theBody2',
-                        'DelaySeconds' => 54321,
-                        'MessageDeduplicationId' => 'theDeduplicationId2',
-                        'MessageGroupId' => 'groupId2',
-                    ]
+                    'MessageBody' => 'theBody1',
+                    'DelaySeconds' => 12345,
+                    'MessageDeduplicationId' => 'theDeduplicationId1',
+                    'MessageGroupId' => 'groupId1',
                 ],
+                [
+                    'Id' => null,
+                    'MessageAttributes' => [
+                        'Headers' => [
+                            'DataType' => 'String',
+                            'StringValue' => '[{"hkey2":"hvaleu2"},{"key2":"value2"}]',
+                        ],
+                    ],
+                    'MessageBody' => 'theBody2',
+                    'DelaySeconds' => 54321,
+                    'MessageDeduplicationId' => 'theDeduplicationId2',
+                    'MessageGroupId' => 'groupId2',
+                ]
             ],
         ];
 
@@ -285,9 +285,6 @@ class SqsProducerTest extends TestCase
         $message2->setDelaySeconds(54321);
         $message2->setMessageDeduplicationId('theDeduplicationId2');
         $message2->setMessageGroupId('groupId2');
-
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Messages were not sent: [{"Code":"code","Id":"id","Message":"MESSAGE","SenderFault":true}]');
 
         $producer = new SqsProducer($context);
         $producer->sendAll($destination, [$message1, $message2]);
