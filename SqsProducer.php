@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Enqueue\Sqs;
 
-use Interop\Queue\InvalidDestinationException;
-use Interop\Queue\InvalidMessageException;
-use Interop\Queue\PriorityNotSupportedException;
-use Interop\Queue\PsrDestination;
-use Interop\Queue\PsrMessage;
-use Interop\Queue\PsrProducer;
-use Interop\Queue\TimeToLiveNotSupportedException;
+use Interop\Queue\Destination;
+use Interop\Queue\Exception\InvalidDestinationException;
+use Interop\Queue\Exception\InvalidMessageException;
+use Interop\Queue\Exception\PriorityNotSupportedException;
+use Interop\Queue\Exception\TimeToLiveNotSupportedException;
+use Interop\Queue\Message;
+use Interop\Queue\Producer;
 
-class SqsProducer implements PsrProducer
+class SqsProducer implements Producer
 {
     /**
      * @var int|null
@@ -33,7 +33,7 @@ class SqsProducer implements PsrProducer
      * @param SqsDestination $destination
      * @param SqsMessage     $message
      */
-    public function send(PsrDestination $destination, PsrMessage $message): void
+    public function send(Destination $destination, Message $message): void
     {
         InvalidDestinationException::assertDestinationInstanceOf($destination, SqsDestination::class);
         InvalidMessageException::assertMessageInstanceOf($message, SqsMessage::class);
@@ -50,7 +50,7 @@ class SqsProducer implements PsrProducer
     /**
      * @return SqsProducer
      */
-    public function setDeliveryDelay(int $deliveryDelay = null): PsrProducer
+    public function setDeliveryDelay(int $deliveryDelay = null): Producer
     {
         $this->deliveryDelay = $deliveryDelay;
 
@@ -65,7 +65,7 @@ class SqsProducer implements PsrProducer
     /**
      * @return SqsProducer
      */
-    public function setPriority(int $priority = null): PsrProducer
+    public function setPriority(int $priority = null): Producer
     {
         if (null === $priority) {
             return $this;
@@ -82,7 +82,7 @@ class SqsProducer implements PsrProducer
     /**
      * @return SqsProducer
      */
-    public function setTimeToLive(int $timeToLive = null): PsrProducer
+    public function setTimeToLive(int $timeToLive = null): Producer
     {
         if (null === $timeToLive) {
             return $this;
@@ -97,11 +97,11 @@ class SqsProducer implements PsrProducer
     }
 
     /**
-     * @param PsrDestination $destination
+     * @param Destination $destination
      * @param array $messages
      * @return array
      */
-    public function sendAll(PsrDestination $destination, array $messages): array
+    public function sendAll(Destination $destination, array $messages): array
     {
         InvalidDestinationException::assertDestinationInstanceOf($destination, SqsDestination::class);
 
@@ -125,7 +125,7 @@ class SqsProducer implements PsrProducer
      * @return array
      * @throws InvalidMessageException
      */
-    private function arguments(PsrDestination $destination, $messages): array
+    private function arguments(Destination $destination, $messages): array
     {
         $arguments = [
             'QueueUrl' => $this->context->getQueueUrl($destination),
@@ -136,11 +136,11 @@ class SqsProducer implements PsrProducer
             foreach ($messages as $message) {
                 $arguments['Entries'][] = array_merge(
                     ['Id' => $message->getMessageId()],
-                    $this->messsageArguments($message)
+                    $this->messageArguments($message)
                 );
             }
         } else {
-            $arguments = array_merge($arguments, $this->messsageArguments($messages));
+            $arguments = array_merge($arguments, $this->messageArguments($messages));
         }
 
         return $arguments;
@@ -151,7 +151,7 @@ class SqsProducer implements PsrProducer
      * @return array
      * @throws InvalidMessageException
      */
-    private function messsageArguments(SqsMessage $message): array
+    private function messageArguments(SqsMessage $message): array
     {
         InvalidMessageException::assertMessageInstanceOf($message, SqsMessage::class);
 

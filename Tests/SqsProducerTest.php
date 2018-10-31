@@ -9,18 +9,19 @@ use Enqueue\Sqs\SqsDestination;
 use Enqueue\Sqs\SqsMessage;
 use Enqueue\Sqs\SqsProducer;
 use Enqueue\Test\ClassExtensionTrait;
-use Interop\Queue\InvalidDestinationException;
-use Interop\Queue\InvalidMessageException;
-use Interop\Queue\PsrDestination;
-use Interop\Queue\PsrProducer;
+use Interop\Queue\Destination;
+use Interop\Queue\Exception\InvalidDestinationException;
+use Interop\Queue\Exception\InvalidMessageException;
+use Interop\Queue\Producer;
+use PHPUnit\Framework\TestCase;
 
-class SqsProducerTest extends \PHPUnit_Framework_TestCase
+class SqsProducerTest extends TestCase
 {
     use ClassExtensionTrait;
 
     public function testShouldImplementProducerInterface()
     {
-        $this->assertClassImplements(PsrProducer::class, SqsProducer::class);
+        $this->assertClassImplements(Producer::class, SqsProducer::class);
     }
 
     public function testCouldBeConstructedWithRequiredArguments()
@@ -43,11 +44,11 @@ class SqsProducerTest extends \PHPUnit_Framework_TestCase
     public function testShouldThrowIfDestinationOfInvalidType()
     {
         $this->expectException(InvalidDestinationException::class);
-        $this->expectExceptionMessage('The destination must be an instance of Enqueue\Sqs\SqsDestination but got Mock_PsrDestinat');
+        $this->expectExceptionMessage('The destination must be an instance of Enqueue\Sqs\SqsDestination but got Mock_Destinat');
 
         $producer = new SqsProducer($this->createSqsContextMock());
 
-        $producer->send($this->createMock(PsrDestination::class), new SqsMessage());
+        $producer->send($this->createMock(Destination::class), new SqsMessage());
     }
 
     public function testShouldThrowIfSendMessageFailed()
