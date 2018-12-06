@@ -224,6 +224,13 @@ class SqsClientTest extends TestCase
         ];
 
         yield [
+            'getQueueAttributes',
+            ['fooArg' => 'fooArgVal'],
+            ['bar' => 'barVal'],
+            AwsSqsClient::class,
+        ];
+
+        yield [
             'createQueue',
             ['fooArg' => 'fooArgVal'],
             ['bar' => 'barVal'],
@@ -270,6 +277,13 @@ class SqsClientTest extends TestCase
 
         yield [
             'getQueueUrl',
+            ['fooArg' => 'fooArgVal'],
+            ['bar' => 'barVal'],
+            MultiRegionClient::class,
+        ];
+
+        yield [
+            'getQueueAttributes',
             ['fooArg' => 'fooArgVal'],
             ['bar' => 'barVal'],
             MultiRegionClient::class,

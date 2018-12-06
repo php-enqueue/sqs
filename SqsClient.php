@@ -26,7 +26,7 @@ class SqsClient
     private $inputClient;
 
     /**
-     * @param AwsSqsClient|callable $inputClient
+     * @param AwsSqsClient|MultiRegionClient|callable $inputClient
      */
     public function __construct($inputClient)
     {
@@ -51,6 +51,11 @@ class SqsClient
     public function getQueueUrl(array $args): Result
     {
         return $this->callApi('getQueueUrl', $args);
+    }
+
+    public function getQueueAttributes(array $args): Result
+    {
+        return $this->callApi('getQueueAttributes', $args);
     }
 
     public function createQueue(array $args): Result
