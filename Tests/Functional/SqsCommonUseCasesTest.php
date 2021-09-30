@@ -27,7 +27,7 @@ class SqsCommonUseCasesTest extends TestCase
      */
     private $queueName;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -39,7 +39,7 @@ class SqsCommonUseCasesTest extends TestCase
         $this->context->declareQueue($this->queue);
     }
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         parent::tearDown();
 
@@ -102,7 +102,8 @@ class SqsCommonUseCasesTest extends TestCase
 
         $this->assertEquals(__METHOD__, $message->getBody());
         $this->assertEquals(['FooProperty' => 'FooVal'], $message->getProperties());
-        $this->assertEquals(['BarHeader' => 'BarVal'], $message->getHeaders());
+        $this->assertEquals('BarVal', $message->getHeaders()['BarHeader']);
+        $this->assertNotNull($message->getMessageId());
     }
 
     public function testProduceAndReceiveOneMessageSentDirectlyToTopic()

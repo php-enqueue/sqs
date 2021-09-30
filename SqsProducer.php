@@ -40,7 +40,35 @@ class SqsProducer implements Producer
 
         $arguments = $this->arguments($destination, $message);
 
-        $result = $this->context->getClient()->sendMessage($arguments);
+        $arguments = [
+            '@region' => $destination->getRegion(),
+            'MessageAttributes' => [
+                'Headers' => [
+                    'DataType' => 'String',
+                    'StringValue' => json_encode([$message->getHeaders(), $message->getProperties()]),
+                ],
+            ],
+            'MessageBody' => $body,
+            'QueueUrl' => $this->context->getQueueUrl($destination),
+        ];
+
+        if (null !== $this->deliveryDelay) {
+            $arguments['DelaySeconds'] = (int) $this->deliveryDelay / 1000;
+        }
+
+        if ($message->getDelaySeconds()) {
+            $arguments['DelaySeconds'] = $message->getDelaySeconds();
+        }
+
+        if ($message->getMessageDeduplicationId()) {
+            $arguments['MessageDeduplicationId'] = $message->getMessageDeduplicationId();
+        }
+
+        if ($message->getMessageGroupId()) {
+            $arguments['MessageGroupId'] = $message->getMessageGroupId();
+        }
+
+        $result = $this->context->getSqsClient()->sendMessage($arguments);
 
         if (false == $result->hasKey('MessageId')) {
             throw new \RuntimeException('Message was not sent');

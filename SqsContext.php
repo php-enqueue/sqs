@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Enqueue\Sqs;
 
-use Aws\Sqs\SqsClient;
+use Aws\Sqs\SqsClient as AwsSqsClient;
 use Interop\Queue\Consumer;
 use Interop\Queue\Context;
 use Interop\Queue\Destination;
@@ -25,33 +25,27 @@ class SqsContext implements Context
     private $client;
 
     /**
-     * @var callable
-     */
-    private $clientFactory;
-
-    /**
      * @var array
      */
     private $queueUrls;
 
     /**
-     * Callable must return instance of SqsClient once called.
-     *
-     * @param SqsClient|callable $client
+     * @var array
      */
-    public function __construct($client)
+    private $queueArns;
+
+    /**
+     * @var array
+     */
+    private $config;
+
+    public function __construct(SqsClient $client, array $config)
     {
-        if ($client instanceof SqsClient) {
-            $this->client = $client;
-        } elseif (is_callable($client)) {
-            $this->clientFactory = $client;
-        } else {
-            throw new \InvalidArgumentException(sprintf(
-                'The $client argument must be either %s or callable that returns %s once called.',
-                SqsClient::class,
-                SqsClient::class
-            ));
-        }
+        $this->client = $client;
+        $this->config = $config;
+
+        $this->queueUrls = [];
+        $this->queueArns = [];
     }
 
     /**
@@ -114,7 +108,8 @@ class SqsContext implements Context
     {
         InvalidDestinationException::assertDestinationInstanceOf($queue, SqsDestination::class);
 
-        $this->getClient()->purgeQueue([
+        $this->client->purgeQueue([
+            '@region' => $queue->getRegion(),
             'QueueUrl' => $this->getQueueUrl($queue),
         ]);
     }
@@ -124,22 +119,24 @@ class SqsContext implements Context
         throw SubscriptionConsumerNotSupportedException::providerDoestNotSupportIt();
     }
 
-    public function getClient(): SqsClient
+    public function getAwsSqsClient(): AwsSqsClient
     {
-        if (false == $this->client) {
-            $client = call_user_func($this->clientFactory);
-            if (false == $client instanceof SqsClient) {
-                throw new \LogicException(sprintf(
-                    'The factory must return instance of "%s". But it returns %s',
-                    SqsClient::class,
-                    is_object($client) ? get_class($client) : gettype($client)
-                ));
-            }
+        return $this->client->getAWSClient();
+    }
 
-            $this->client = $client;
-        }
-
+    public function getSqsClient(): SqsClient
+    {
         return $this->client;
+    }
+
+    /**
+     * @deprecated use getAwsSqsClient method
+     */
+    public function getClient(): AwsSqsClient
+    {
+        @trigger_error('The method is deprecated since 0.9.2. SqsContext::getAwsSqsClient() method should be used.', E_USER_DEPRECATED);
+
+        return $this->getAwsSqsClient();
     }
 
     public function getQueueUrl(SqsDestination $destination): string
@@ -148,20 +145,51 @@ class SqsContext implements Context
             return $this->queueUrls[$destination->getQueueName()];
         }
 
-        $result = $this->getClient()->getQueueUrl([
+        $arguments = [
+            '@region' => $destination->getRegion(),
             'QueueName' => $destination->getQueueName(),
-        ]);
+        ];
+
+        if ($destination->getQueueOwnerAWSAccountId()) {
+            $arguments['QueueOwnerAWSAccountId'] = $destination->getQueueOwnerAWSAccountId();
+        } elseif (false == empty($this->config['queue_owner_aws_account_id'])) {
+            $arguments['QueueOwnerAWSAccountId'] = $this->config['queue_owner_aws_account_id'];
+        }
+
+        $result = $this->client->getQueueUrl($arguments);
 
         if (false == $result->hasKey('QueueUrl')) {
             throw new \RuntimeException(sprintf('QueueUrl cannot be resolved. queueName: "%s"', $destination->getQueueName()));
         }
 
-        return $this->queueUrls[$destination->getQueueName()] = $result->get('QueueUrl');
+        return $this->queueUrls[$destination->getQueueName()] = (string) $result->get('QueueUrl');
+    }
+
+    public function getQueueArn(SqsDestination $destination): string
+    {
+        if (isset($this->queueArns[$destination->getQueueName()])) {
+            return $this->queueArns[$destination->getQueueName()];
+        }
+
+        $arguments = [
+            '@region' => $destination->getRegion(),
+            'QueueUrl' => $this->getQueueUrl($destination),
+            'AttributeNames' => ['QueueArn'],
+        ];
+
+        $result = $this->client->getQueueAttributes($arguments);
+
+        if (false == $arn = $result->search('Attributes.QueueArn')) {
+            throw new \RuntimeException(sprintf('QueueArn cannot be resolved. queueName: "%s"', $destination->getQueueName()));
+        }
+
+        return $this->queueArns[$destination->getQueueName()] = (string) $arn;
     }
 
     public function declareQueue(SqsDestination $dest): void
     {
-        $result = $this->getClient()->createQueue([
+        $result = $this->client->createQueue([
+            '@region' => $dest->getRegion(),
             'Attributes' => $dest->getAttributes(),
             'QueueName' => $dest->getQueueName(),
         ]);
@@ -175,7 +203,7 @@ class SqsContext implements Context
 
     public function deleteQueue(SqsDestination $dest): void
     {
-        $this->getClient()->deleteQueue([
+        $this->client->deleteQueue([
             'QueueUrl' => $this->getQueueUrl($dest),
         ]);
 

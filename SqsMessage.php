@@ -24,6 +24,11 @@ class SqsMessage implements Message
     private $headers;
 
     /**
+     * @var array
+     */
+    private $attributes;
+
+    /**
      * @var bool
      */
     private $redelivered;
@@ -48,13 +53,20 @@ class SqsMessage implements Message
      */
     private $receiptHandle;
 
+    /**
+     * @var int
+     */
+    private $requeueVisibilityTimeout;
+
     public function __construct(string $body = '', array $properties = [], array $headers = [])
     {
         $this->body = $body;
         $this->properties = $properties;
         $this->headers = $headers;
+        $this->attributes = [];
         $this->redelivered = false;
         $this->delaySeconds = 0;
+        $this->requeueVisibilityTimeout = 0;
     }
 
     public function setBody(string $body): void
@@ -105,6 +117,21 @@ class SqsMessage implements Message
     public function getHeader(string $name, $default = null)
     {
         return array_key_exists($name, $this->headers) ? $this->headers[$name] : $default;
+    }
+
+    public function setAttributes(array $attributes): void
+    {
+        $this->attributes = $attributes;
+    }
+
+    public function getAttributes(): array
+    {
+        return $this->attributes;
+    }
+
+    public function getAttribute(string $name, $default = null)
+    {
+        return array_key_exists($name, $this->attributes) ? $this->attributes[$name] : $default;
     }
 
     public function isRedelivered(): bool
@@ -228,5 +255,20 @@ class SqsMessage implements Message
     public function getReceiptHandle(): ?string
     {
         return $this->receiptHandle;
+    }
+
+    /**
+     * The number of seconds before the message can be visible again when requeuing. Valid values: 0 to 43200. Maximum: 12 hours.
+     *
+     * Set requeue visibility timeout
+     */
+    public function setRequeueVisibilityTimeout(int $seconds): void
+    {
+        $this->requeueVisibilityTimeout = $seconds;
+    }
+
+    public function getRequeueVisibilityTimeout(): int
+    {
+        return $this->requeueVisibilityTimeout;
     }
 }
