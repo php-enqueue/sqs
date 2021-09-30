@@ -2,23 +2,49 @@
 
 namespace Enqueue\Sqs\Tests\Spec;
 
+use Enqueue\Sqs\SqsContext;
+use Enqueue\Sqs\SqsDestination;
+use Enqueue\Test\RetryTrait;
+use Enqueue\Test\SqsExtension;
+use Interop\Queue\Context;
 use Interop\Queue\Spec\SendToTopicAndReceiveNoWaitFromQueueSpec;
 
 /**
  * @group functional
+ * @retry 5
  */
 class SqsSendToTopicAndReceiveNoWaitFromQueueTest extends SendToTopicAndReceiveNoWaitFromQueueSpec
 {
-    public function test()
-    {
-        $this->markTestSkipped('The SQS does not support it');
-    }
+    use RetryTrait;
+    use SqsExtension;
+    use CreateSqsQueueTrait;
 
     /**
-     * {@inheritdoc}
+     * @var SqsContext
      */
-    protected function createContext()
+    private $context;
+
+    protected function tearDown(): void
     {
-        throw new \LogicException('Should not be ever called');
+        parent::tearDown();
+
+        if ($this->context && $this->queue) {
+            $this->context->deleteQueue($this->queue);
+        }
+    }
+
+    protected function createContext(): SqsContext
+    {
+        return $this->context = $this->buildSqsContext();
+    }
+
+    protected function createTopic(Context $context, $queueName): SqsDestination
+    {
+        return $this->createSqsQueue($context, $queueName);
+    }
+
+    protected function createQueue(Context $context, $queueName): SqsDestination
+    {
+        return $this->createSqsQueue($context, $queueName);
     }
 }

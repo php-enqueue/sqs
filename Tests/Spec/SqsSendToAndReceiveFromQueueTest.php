@@ -4,28 +4,27 @@ namespace Enqueue\Sqs\Tests\Spec;
 
 use Enqueue\Sqs\SqsContext;
 use Enqueue\Sqs\SqsDestination;
+use Enqueue\Test\RetryTrait;
 use Enqueue\Test\SqsExtension;
 use Interop\Queue\Context;
 use Interop\Queue\Spec\SendToAndReceiveFromQueueSpec;
 
 /**
  * @group functional
+ * @retry 5
  */
 class SqsSendToAndReceiveFromQueueTest extends SendToAndReceiveFromQueueSpec
 {
+    use RetryTrait;
     use SqsExtension;
+    use CreateSqsQueueTrait;
 
     /**
      * @var SqsContext
      */
     private $context;
 
-    /**
-     * @var SqsDestination
-     */
-    private $queue;
-
-    protected function tearDown()
+    protected function tearDown(): void
     {
         parent::tearDown();
 
@@ -34,26 +33,13 @@ class SqsSendToAndReceiveFromQueueTest extends SendToAndReceiveFromQueueSpec
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    protected function createContext()
+    protected function createContext(): SqsContext
     {
         return $this->context = $this->buildSqsContext();
     }
 
-    /**
-     * {@inheritdoc}
-     *
-     * @param SqsContext $context
-     */
-    protected function createQueue(Context $context, $queueName)
+    protected function createQueue(Context $context, $queueName): SqsDestination
     {
-        $queueName = $queueName.time();
-
-        $this->queue = $context->createQueue($queueName);
-        $context->declareQueue($this->queue);
-
-        return $this->queue;
+        return $this->createSqsQueue($context, $queueName);
     }
 }

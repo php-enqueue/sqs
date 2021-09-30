@@ -3,7 +3,7 @@
 namespace Enqueue\Sqs\Tests;
 
 use Aws\Result;
-use Aws\Sqs\SqsClient;
+use Enqueue\Sqs\SqsClient;
 use Enqueue\Sqs\SqsContext;
 use Enqueue\Sqs\SqsDestination;
 use Enqueue\Sqs\SqsMessage;
@@ -68,8 +68,8 @@ class SqsProducerTest extends TestCase
         ;
         $context
             ->expects($this->once())
-            ->method('getClient')
-            ->will($this->returnValue($client))
+            ->method('getSqsClient')
+            ->willReturn($client)
         ;
 
         $destination = new SqsDestination('queue-name');
@@ -85,6 +85,7 @@ class SqsProducerTest extends TestCase
     public function testShouldSendMessage()
     {
         $expectedArguments = [
+            '@region' => null,
             'QueueUrl' => 'theQueueUrl',
             'MessageAttributes' => [
                 'Headers' => [
@@ -103,7 +104,7 @@ class SqsProducerTest extends TestCase
             ->expects($this->once())
             ->method('sendMessage')
             ->with($this->identicalTo($expectedArguments))
-            ->willReturn(new Result())
+            ->willReturn(new Result(['MessageId' => 'theMessageId']))
         ;
 
         $context = $this->createSqsContextMock();
@@ -114,8 +115,8 @@ class SqsProducerTest extends TestCase
         ;
         $context
             ->expects($this->once())
-            ->method('getClient')
-            ->will($this->returnValue($client))
+            ->method('getSqsClient')
+            ->willReturn($client)
         ;
 
         $destination = new SqsDestination('queue-name');
@@ -124,8 +125,48 @@ class SqsProducerTest extends TestCase
         $message->setMessageDeduplicationId('theDeduplicationId');
         $message->setMessageGroupId('groupId');
 
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Message was not sent');
+        $producer = new SqsProducer($context);
+        $producer->send($destination, $message);
+    }
+
+    public function testShouldSendMessageWithCustomRegion()
+    {
+        $expectedArguments = [
+            '@region' => 'theRegion',
+            'MessageAttributes' => [
+                'Headers' => [
+                    'DataType' => 'String',
+                    'StringValue' => '[[],[]]',
+                ],
+            ],
+            'MessageBody' => 'theBody',
+            'QueueUrl' => 'theQueueUrl',
+        ];
+
+        $client = $this->createSqsClientMock();
+        $client
+            ->expects($this->once())
+            ->method('sendMessage')
+            ->with($this->identicalTo($expectedArguments))
+            ->willReturn(new Result(['MessageId' => 'theMessageId']))
+        ;
+
+        $context = $this->createSqsContextMock();
+        $context
+            ->expects($this->once())
+            ->method('getQueueUrl')
+            ->willReturn('theQueueUrl')
+        ;
+        $context
+            ->expects($this->once())
+            ->method('getSqsClient')
+            ->willReturn($client)
+        ;
+
+        $destination = new SqsDestination('queue-name');
+        $destination->setRegion('theRegion');
+
+        $message = new SqsMessage('theBody');
 
         $producer = new SqsProducer($context);
         $producer->send($destination, $message);
@@ -134,6 +175,7 @@ class SqsProducerTest extends TestCase
     public function testShouldSendDelayedMessage()
     {
         $expectedArguments = [
+            '@region' => null,
             'QueueUrl' => 'theQueueUrl',
             'MessageAttributes' => [
                 'Headers' => [
@@ -152,7 +194,7 @@ class SqsProducerTest extends TestCase
             ->expects($this->once())
             ->method('sendMessage')
             ->with($this->identicalTo($expectedArguments))
-            ->willReturn(new Result())
+            ->willReturn(new Result(['MessageId' => 'theMessageId']))
         ;
 
         $context = $this->createSqsContextMock();
@@ -163,8 +205,8 @@ class SqsProducerTest extends TestCase
         ;
         $context
             ->expects($this->once())
-            ->method('getClient')
-            ->will($this->returnValue($client))
+            ->method('getSqsClient')
+            ->willReturn($client)
         ;
 
         $destination = new SqsDestination('queue-name');
@@ -173,26 +215,23 @@ class SqsProducerTest extends TestCase
         $message->setMessageDeduplicationId('theDeduplicationId');
         $message->setMessageGroupId('groupId');
 
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Message was not sent');
-
         $producer = new SqsProducer($context);
         $producer->setDeliveryDelay(5000);
         $producer->send($destination, $message);
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|SqsContext
+     * @return \PHPUnit\Framework\MockObject\MockObject|SqsContext
      */
-    private function createSqsContextMock()
+    private function createSqsContextMock(): SqsContext
     {
         return $this->createMock(SqsContext::class);
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|SqsClient
+     * @return \PHPUnit\Framework\MockObject\MockObject|SqsClient
      */
-    private function createSqsClientMock()
+    private function createSqsClientMock(): SqsClient
     {
         return $this
             ->getMockBuilder(SqsClient::class)
