@@ -79,7 +79,7 @@ class SqsDestinationTest extends TestCase
         $destination = new SqsDestination('aDestinationName');
         $destination->setVisibilityTimeout(12345);
 
-        $this->assertSame(['VisibilityTimeout' => 12345], $destination->getAttributes());
+        $this->assertSame(['VisibilityTimeout' => '12345'], $destination->getAttributes());
     }
 
     public function testCouldSetFifoQueueAttributeAndUnsetIt()
