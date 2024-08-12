@@ -208,7 +208,7 @@ class SqsConsumerTest extends TestCase
                 '@region' => 'theRegion',
                 'QueueUrl' => 'theQueueUrl',
                 'ReceiptHandle' => 'theReceipt',
-                'VisibilityTimeout' => 0,
+                'VisibilityTimeout' => '0',
             ]))
         ;
 
@@ -248,7 +248,7 @@ class SqsConsumerTest extends TestCase
                 '@region' => 'theRegion',
                 'QueueUrl' => 'theQueueUrl',
                 'ReceiptHandle' => 'theReceipt',
-                'VisibilityTimeout' => 30,
+                'VisibilityTimeout' => '30',
             ]))
         ;
 
