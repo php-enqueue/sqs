@@ -138,7 +138,7 @@ class SqsConsumer implements Consumer
                 '@region' => $this->queue->getRegion(),
                 'QueueUrl' => $this->context->getQueueUrl($this->queue),
                 'ReceiptHandle' => $message->getReceiptHandle(),
-                'VisibilityTimeout' => $message->getRequeueVisibilityTimeout(),
+                'VisibilityTimeout' => (string) $message->getRequeueVisibilityTimeout(),
             ]);
         } else {
             $this->context->getSqsClient()->deleteMessage([
@@ -165,7 +165,7 @@ class SqsConsumer implements Consumer
         ];
 
         if ($this->visibilityTimeout) {
-            $arguments['VisibilityTimeout'] = $this->visibilityTimeout;
+            $arguments['VisibilityTimeout'] = (string) $this->visibilityTimeout;
         }
 
         $result = $this->context->getSqsClient()->receiveMessage($arguments);

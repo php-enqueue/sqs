@@ -150,7 +150,7 @@ class SqsDestination implements Topic, Queue
         if (null == $seconds) {
             unset($this->attributes['VisibilityTimeout']);
         } else {
-            $this->attributes['VisibilityTimeout'] = $seconds;
+            $this->attributes['VisibilityTimeout'] = (string) $seconds;
         }
     }
 
